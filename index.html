@@ -1,41 +1,287 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TonexT Tech</title>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px 20px;
-      background: #f5f7fb;
-      color: #202020;
-    }
-
-    h1 {
-      color: #2F63D3;
-    }
-
-    .container {
-      max-width: 700px;
-      margin: auto;
-      padding: 40px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#2f63d3">
+  <meta name="description" content="TonexT Business Suite offline-first quotation and repair app">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>TonexT Business Suite</title>
 </head>
-
 <body>
-  <div class="container">
-    <h1>TONEXT TECH</h1>
-    <h2>I.T. Solutions & Repair Services</h2>
+  <header class="app-header">
+    <div class="brand-wrap">
+      <div class="brand-mark">T</div>
+      <div>
+        <h1>TONEXT TECH</h1>
+        <p>I.T. Solutions &amp; Repair Services</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="networkBadge" class="badge">Checking…</span>
+      <span id="pendingBadge" class="badge badge-warning">0 pending</span>
+      <button id="installButton" class="button button-secondary button-small" hidden>Install App</button>
+      <button id="logoutButton" class="button button-danger button-small" hidden>Logout</button>
+    </div>
+  </header>
 
-    <p>Our website is now online.</p>
-    <p>Contact us: 09553728640</p>
-  </div>
+  <main>
+    <section id="loginView" class="panel login-panel">
+      <h2>Sign in</h2>
+      <p class="muted">The first login and initial data download require internet. After that, the installed app can open and work offline.</p>
+      <label>
+        Apps Script backend URL
+        <input id="backendUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="url">
+      </label>
+      <div class="two-column">
+        <label>
+          Username
+          <input id="username" autocomplete="username" placeholder="admin">
+        </label>
+        <label>
+          Password
+          <input id="password" type="password" autocomplete="current-password">
+        </label>
+      </div>
+      <button id="loginButton" class="button">Login</button>
+      <button id="offlineContinueButton" class="button button-secondary" hidden>Continue Offline</button>
+      <p id="loginMessage" class="message"></p>
+    </section>
+
+    <section id="appView" hidden>
+      <div class="user-strip">
+        <div><strong id="loggedUser"></strong><span id="offlineSessionText" class="muted"></span></div>
+        <button id="syncNowTop" class="button button-small">Sync Now</button>
+      </div>
+
+      <nav id="mainNav" class="nav-grid" aria-label="Main navigation">
+        <button data-page="dashboard" data-roles="Administrator,Sales,Technician,Viewer">Dashboard</button>
+        <button data-page="customers" data-roles="Administrator,Sales,Technician">Customers</button>
+        <button data-page="items" data-roles="Administrator,Sales">Items</button>
+        <button data-page="parts" data-roles="Administrator,Sales,Technician">Repair Parts</button>
+        <button data-page="project" data-roles="Administrator,Sales">Project Quote</button>
+        <button data-page="repair" data-roles="Administrator,Sales">Repair Quote</button>
+        <button data-page="history" data-roles="Administrator,Sales">Quote History</button>
+        <button data-page="users" data-roles="Administrator">Users</button>
+        <button data-page="sync" data-roles="Administrator,Sales,Technician,Viewer">Sync Center</button>
+        <button data-page="settings" data-roles="Administrator">Settings</button>
+      </nav>
+
+      <section id="page-dashboard" class="page panel">
+        <div class="page-heading"><div><h2>Dashboard</h2><p id="dashboardSubtitle" class="muted"></p></div></div>
+        <div class="metric-grid">
+          <article class="metric"><span>Customers</span><strong id="metricCustomers">0</strong></article>
+          <article class="metric"><span>Items</span><strong id="metricItems">0</strong></article>
+          <article class="metric"><span>Repair Parts</span><strong id="metricParts">0</strong></article>
+          <article class="metric"><span>Project Quotes</span><strong id="metricProjects">0</strong></article>
+          <article class="metric"><span>Repair Quotes</span><strong id="metricRepairs">0</strong></article>
+          <article class="metric"><span>Pending Sync</span><strong id="metricPending">0</strong></article>
+        </div>
+        <div class="notice">
+          <strong>Offline-ready workflow</strong>
+          <p>Records created without internet are saved on this device and placed in the outbox. They upload when you press Sync Now after reconnecting.</p>
+        </div>
+      </section>
+
+      <section id="page-customers" class="page panel" hidden>
+        <div class="page-heading">
+          <div><h2>Customers</h2><p class="muted">Search locally even without internet.</p></div>
+          <button id="newCustomerButton" class="button button-small">New Customer</button>
+        </div>
+        <input id="customerSearch" type="search" placeholder="Search name, company, address, contact…">
+        <div id="customerForm" class="form-card" hidden>
+          <h3 id="customerFormTitle">New Customer</h3>
+          <input id="customerId" type="hidden">
+          <div class="two-column">
+            <label>Customer type<select id="customerType"><option>Walk-in</option><option>Business</option><option>Government</option><option>Residential</option><option>School</option></select></label>
+            <label>Customer name<input id="customerName"></label>
+            <label>Company / business<input id="customerCompany"></label>
+            <label>Contact number<input id="customerContact" inputmode="tel"></label>
+            <label>Email<input id="customerEmail" type="email"></label>
+            <label>TIN<input id="customerTin"></label>
+          </div>
+          <label>Address<textarea id="customerAddress" rows="2"></textarea></label>
+          <label>Notes<textarea id="customerNotes" rows="2"></textarea></label>
+          <div class="button-row"><button id="saveCustomerButton" class="button">Save Customer</button><button id="cancelCustomerButton" class="button button-secondary">Cancel</button></div>
+        </div>
+        <div id="customerList" class="card-list"></div>
+      </section>
+
+      <section id="page-items" class="page panel" hidden>
+        <div class="page-heading">
+          <div><h2>Master Items</h2><p class="muted">Sales sees SRP. Dealer cost is restricted to Administrator.</p></div>
+          <button id="newItemButton" class="button button-small admin-only">New Item</button>
+        </div>
+        <input id="itemSearch" type="search" placeholder="Search item, category, brand, model…">
+        <div id="itemForm" class="form-card admin-only" hidden>
+          <h3>Item Details</h3>
+          <input id="itemId" type="hidden">
+          <div class="three-column">
+            <label>Category<input id="itemCategory"></label>
+            <label>Item name<input id="itemName"></label>
+            <label>Brand<input id="itemBrand"></label>
+            <label>Model<input id="itemModel"></label>
+            <label>Pricing unit<input id="itemUnit" value="Per Unit"></label>
+            <label>Supplier<input id="itemSupplier"></label>
+            <label>Dealer price<input id="itemDealer" type="number" min="0" step="0.01"></label>
+            <label>SRP<input id="itemSrp" type="number" min="0" step="0.01"></label>
+            <label>Stock<input id="itemStock" type="number" step="1"></label>
+            <label>Warranty<input id="itemWarranty"></label>
+            <label>Reorder level<input id="itemReorder" type="number" step="1"></label>
+            <label>Location<input id="itemLocation"></label>
+          </div>
+          <label>Remarks<textarea id="itemRemarks" rows="2"></textarea></label>
+          <div class="button-row"><button id="saveItemButton" class="button">Save Item</button><button id="cancelItemButton" class="button button-secondary">Cancel</button></div>
+        </div>
+        <div id="itemList" class="card-list"></div>
+      </section>
+
+      <section id="page-parts" class="page panel" hidden>
+        <div class="page-heading">
+          <div><h2>Repair Parts Lookup</h2><p class="muted">Compatible models and repair pricing remain available offline.</p></div>
+          <button id="newPartButton" class="button button-small admin-only">New Part</button>
+        </div>
+        <input id="partSearch" type="search" placeholder="Search category, part, brand, compatibility…">
+        <div id="partForm" class="form-card admin-only" hidden>
+          <h3>Repair Part Details</h3>
+          <input id="partId" type="hidden">
+          <div class="three-column">
+            <label>Category<input id="partCategory"></label>
+            <label>Part name<input id="partName"></label>
+            <label>Brand<input id="partBrand"></label>
+            <label>Model / compatibility<input id="partCompatibility"></label>
+            <label>Dealer price<input id="partDealer" type="number" min="0" step="0.01"></label>
+            <label>Suggested retail<input id="partSrp" type="number" min="0" step="0.01"></label>
+            <label>Shop labor<input id="partShopLabor" type="number" min="0" step="0.01"></label>
+            <label>On-site labor<input id="partOnsiteLabor" type="number" min="0" step="0.01"></label>
+            <label>Cellphone repair cost<input id="partRepairCost" type="number" min="0" step="0.01"></label>
+            <label>Supplier<input id="partSupplier"></label>
+            <label>Warranty<input id="partWarranty"></label>
+          </div>
+          <label>Remarks<textarea id="partRemarks" rows="2"></textarea></label>
+          <div class="button-row"><button id="savePartButton" class="button">Save Part</button><button id="cancelPartButton" class="button button-secondary">Cancel</button></div>
+        </div>
+        <div id="partList" class="card-list"></div>
+      </section>
+
+      <section id="page-project" class="page panel" hidden>
+        <div class="page-heading"><div><h2>Project Quotation</h2><p class="muted">Create and save the quotation offline. PDF, Excel, and Word are generated on the device.</p></div></div>
+        <div class="two-column">
+          <label>Customer<select id="projectCustomer"></select></label>
+          <label>Service type<select id="projectService"><option>Analog CCTV</option><option>IP CCTV</option><option>Telephone System</option><option>Paging System</option><option>Structured Cabling</option><option>Solar PV</option><option>Network/WiFi</option><option>Other</option></select></label>
+          <label>Project location<input id="projectLocation"></label>
+          <label>Sales personnel<input id="projectSales"></label>
+        </div>
+        <div class="line-toolbar">
+          <select id="projectItemPicker"></select>
+          <button id="addProjectItemButton" class="button button-small">Add Selected Item</button>
+          <button id="addProjectManualButton" class="button button-secondary button-small">Add Manual Line</button>
+        </div>
+        <div class="table-scroll"><table class="data-table"><thead><tr><th>Qty</th><th>Description</th><th>Unit</th><th>Unit Price</th><th class="admin-cost">Dealer</th><th>Total</th><th></th></tr></thead><tbody id="projectLines"></tbody></table></div>
+        <div class="quote-summary-grid">
+          <label>Labor %<input id="projectLaborPercent" type="number" min="0" step="1" value="30"></label>
+          <label>Manual labor override<input id="projectManualLabor" type="number" min="0" step="0.01" placeholder="Leave blank for automatic"></label>
+          <label>Discount<input id="projectDiscount" type="number" min="0" step="0.01" value="0"></label>
+          <label>Downpayment %<input id="projectDownpaymentPercent" type="number" min="0" max="100" step="1" value="50"></label>
+        </div>
+        <div id="projectTotals" class="totals-card"></div>
+        <label>Notes<textarea id="projectNotes" rows="3"></textarea></label>
+        <button id="saveProjectQuoteButton" class="button">Save Project Quotation</button>
+      </section>
+
+      <section id="page-repair" class="page panel" hidden>
+        <div class="page-heading"><div><h2>Repair Quotation</h2><p class="muted">No downpayment by default.</p></div></div>
+        <div class="three-column">
+          <label>Customer<select id="repairCustomer"></select></label>
+          <label>Device type<input id="repairDeviceType" placeholder="Laptop, cellphone, printer…"></label>
+          <label>Brand<input id="repairBrand"></label>
+          <label>Model<input id="repairModel"></label>
+          <label>Status<select id="repairStatus"><option>Draft</option><option>For Approval</option><option>Approved</option></select></label>
+        </div>
+        <label>Reported problem<textarea id="repairProblem" rows="2"></textarea></label>
+        <div class="line-toolbar">
+          <select id="repairPartPicker"></select>
+          <button id="addRepairPartButton" class="button button-small">Add Selected Part</button>
+          <button id="addRepairManualButton" class="button button-secondary button-small">Add Manual Line</button>
+        </div>
+        <div class="table-scroll"><table class="data-table"><thead><tr><th>Qty</th><th>Description</th><th>Unit Price</th><th>Labor</th><th>Total</th><th></th></tr></thead><tbody id="repairLines"></tbody></table></div>
+        <div id="repairTotals" class="totals-card"></div>
+        <label>Notes<textarea id="repairNotes" rows="3"></textarea></label>
+        <button id="saveRepairQuoteButton" class="button">Save Repair Quotation</button>
+      </section>
+
+      <section id="page-history" class="page panel" hidden>
+        <div class="page-heading"><div><h2>Quotation History</h2><p class="muted">Generate documents without waiting for Google Drive.</p></div></div>
+        <input id="historySearch" type="search" placeholder="Search quote number or customer…">
+        <div id="historyList" class="card-list"></div>
+      </section>
+
+      <section id="page-users" class="page panel" hidden>
+        <div class="page-heading"><div><h2>User Accounts</h2><p class="muted">User changes require internet.</p></div></div>
+        <div class="form-card">
+          <div class="three-column">
+            <label>Full name<input id="newUserFullName"></label>
+            <label>Username<input id="newUserUsername"></label>
+            <label>Temporary password<input id="newUserPassword" type="password"></label>
+            <label>Role<select id="newUserRole"><option>Administrator</option><option>Sales</option><option>Technician</option><option>Viewer</option></select></label>
+          </div>
+          <button id="createUserButton" class="button">Create User</button>
+        </div>
+        <button id="refreshUsersButton" class="button button-secondary button-small">Refresh Users</button>
+        <div id="userList" class="card-list"></div>
+      </section>
+
+      <section id="page-sync" class="page panel" hidden>
+        <div class="page-heading"><div><h2>Sync Center</h2><p class="muted">Push local changes and pull the latest Google Sheets data.</p></div></div>
+        <div class="metric-grid compact">
+          <article class="metric"><span>Connection</span><strong id="syncConnection">—</strong></article>
+          <article class="metric"><span>Pending operations</span><strong id="syncPending">0</strong></article>
+          <article class="metric"><span>Last successful sync</span><strong id="syncLast">Never</strong></article>
+        </div>
+        <div class="button-row">
+          <button id="pushButton" class="button">Upload Pending</button>
+          <button id="pullButton" class="button button-secondary">Download Latest</button>
+          <button id="fullSyncButton" class="button">Full Sync</button>
+        </div>
+        <div id="syncLog" class="log-box"></div>
+      </section>
+
+      <section id="page-settings" class="page panel" hidden>
+        <div class="page-heading"><div><h2>Company Settings</h2><p class="muted">These settings are cached for offline documents.</p></div></div>
+        <div class="two-column">
+          <label>Company name<input id="settingCompanyName"></label>
+          <label>Tagline<input id="settingTagline"></label>
+          <label>Address<input id="settingAddress"></label>
+          <label>Contact<input id="settingContact"></label>
+          <label>Email<input id="settingEmail"></label>
+          <label>Facebook<input id="settingFacebook"></label>
+          <label>Bank name<input id="settingBank"></label>
+          <label>Account name<input id="settingAccountName"></label>
+          <label>Account number<input id="settingAccountNumber"></label>
+          <label>Project warranty<input id="settingProjectWarranty"></label>
+          <label>Repair warranty<input id="settingRepairWarranty"></label>
+        </div>
+        <button id="saveSettingsButton" class="button">Save Settings</button>
+        <hr>
+        <h3>Connection</h3>
+        <label>Apps Script backend URL<input id="settingsBackendUrl" type="url"></label>
+        <button id="saveBackendButton" class="button button-secondary">Save Backend URL</button>
+        <button id="requestStorageButton" class="button button-secondary">Request Persistent Offline Storage</button>
+        <hr>
+        <h3>Change My Password</h3>
+        <div class="two-column">
+          <label>Current password<input id="currentPassword" type="password"></label>
+          <label>New password<input id="newPassword" type="password" minlength="8"></label>
+        </div>
+        <button id="changePasswordButton" class="button">Change Password</button>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

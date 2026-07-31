@@ -1,0 +1,15 @@
+{
+  "name": "TonexT Business Suite MVP 9.5",
+  "short_name": "TonexT ERP",
+  "description": "Offline-first quotations, customers, items, and repair parts for TonexT Tech.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fc",
+  "theme_color": "#2f63d3",
+  "orientation": "any",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
